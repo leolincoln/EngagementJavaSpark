@@ -137,9 +137,9 @@ public class HitchCockProcess implements Serializable {
 		// javaFunctions(sc).cassandraTable("engagement","hitchcockdatatotal");
 		// s stores all string->list(data) pairs. string is the id of the row.
 		JavaPairRDD<String, List<Double>> s = javaFunctions(sc)
-				.cassandraTable("engagement", "hitchcockdatatotal",
+				.cassandraTable("engagement", "hitchcockdatatotal2",
 						mapRowTo(Hitchcockdatatotal.class))
-				.where("subject =? and time=? and x=?", "0","0","0")
+				.where("subject =? and y=? and x=? and z=?", "0","0","0","0")
 				.mapToPair(
 						new PairFunction<Hitchcockdatatotal, String, List<Tuple2<Integer, Double>>>() {
 							/**
