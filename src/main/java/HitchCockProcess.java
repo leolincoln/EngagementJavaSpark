@@ -22,7 +22,7 @@ import org.apache.spark.mllib.linalg.Matrix;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.stat.Statistics;
-
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import scala.Tuple2;
 
 import com.datastax.driver.core.Session;
@@ -129,7 +129,8 @@ public class HitchCockProcess implements Serializable {
 
 	/**
 	 * 
-	 * @param sc -- JavaSparkContext passed from main. 
+	 * @param sc
+	 *            -- JavaSparkContext passed from main.
 	 */
 	public void testGetData(JavaSparkContext sc) {
 		// JavaPairRDD<Hitchcockdatatotal,Integer> newRDD =
@@ -151,7 +152,8 @@ public class HitchCockProcess implements Serializable {
 									Hitchcockdatatotal t) throws Exception {
 								// TODO Auto-generated method stub
 								ArrayList<Tuple2<Integer, Double>> temp = new ArrayList<Tuple2<Integer, Double>>();
-								temp.add(new Tuple2<Integer, Double>(t.getTime(),t.getData() + 0.0));
+								temp.add(new Tuple2<Integer, Double>(t
+										.getTime(), t.getData() + 0.0));
 								return new Tuple2<String, List<Tuple2<Integer, Double>>>(
 										t.getID(), temp);
 							}
@@ -201,8 +203,10 @@ public class HitchCockProcess implements Serializable {
 					public Tuple2<String, Double> call(
 							Tuple2<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>> t)
 							throws Exception {
-
-						Double c = getPearsonCorrelation(t._1._2, t._2._2);
+						// .toArray(new Double(t._1._2.size()))
+						PearsonsCorrelation pc = new PearsonsCorrelation();
+						Double c = pc.correlation(getDoubleArray(t._1._2),
+								getDoubleArray(t._2._2));
 						// TODO Auto-generated method stub
 						return new Tuple2<String, Double>(t._1._1 + ":"
 								+ t._2._1, c);
@@ -249,58 +253,22 @@ public class HitchCockProcess implements Serializable {
 		 */
 	}
 
+	private double[] getDoubleArray(List<Double> inArray) {
+		double[] result = new double[inArray.size()];
+		int i = 0;
+		for (Double el : inArray) {
+			result[i] = el;
+			i++;
+		}
+		return result;
+	}
+
 	private class TupleComparator<E> implements Comparator<Tuple2<Integer, E>>,
 			Serializable {
 		@Override
 		public int compare(Tuple2<Integer, E> tuple1, Tuple2<Integer, E> tuple2) {
 			return tuple1._1 < tuple2._1 ? 0 : 1;
 		}
-	}
-
-	public double getPearsonCorrelation(List<Double> scores1,
-			List<Double> scores2) {
-
-		double result = 0;
-
-		double sum_sq_x = 0;
-
-		double sum_sq_y = 0;
-
-		double sum_coproduct = 0;
-
-		double mean_x = scores1.get(0);
-
-		double mean_y = scores2.get(0);
-
-		for (int i = 2; i < scores1.size() + 1; i += 1) {
-
-			double sweep = Double.valueOf(i - 1) / i;
-
-			double delta_x = scores1.get(i - 1) - mean_x;
-
-			double delta_y = scores2.get(i - 1) - mean_y;
-
-			sum_sq_x += delta_x * delta_x * sweep;
-
-			sum_sq_y += delta_y * delta_y * sweep;
-
-			sum_coproduct += delta_x * delta_y * sweep;
-
-			mean_x += delta_x / i;
-
-			mean_y += delta_y / i;
-
-		}
-
-		double pop_sd_x = (double) Math.sqrt(sum_sq_x / scores1.size());
-
-		double pop_sd_y = (double) Math.sqrt(sum_sq_y / scores1.size());
-
-		double cov_x_y = sum_coproduct / scores1.size();
-
-		result = cov_x_y / (pop_sd_x * pop_sd_y);
-
-		return result;
 	}
 
 	/*
