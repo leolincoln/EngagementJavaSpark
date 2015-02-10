@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.commons.lang.ArrayUtils;
@@ -29,6 +31,7 @@ import com.datastax.spark.connector.japi.CassandraJavaUtil;
 import com.datastax.spark.connector.japi.CassandraRow;
 import com.datastax.spark.connector.japi.SparkContextJavaFunctions;
 import com.google.common.collect.Lists;
+
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
 
 public class HitchCockProcess implements Serializable {
@@ -124,55 +127,74 @@ public class HitchCockProcess implements Serializable {
 		return (int) subjectS.count();
 	}
 
+	/**
+	 * 
+	 * @param sc -- JavaSparkContext passed from main. 
+	 */
 	public void testGetData(JavaSparkContext sc) {
 		// JavaPairRDD<Hitchcockdatatotal,Integer> newRDD =
 		// javaFunctions(sc).cassandraTable("engagement","hitchcockdatatotal");
-
+		// s stores all string->list(data) pairs. string is the id of the row.
 		JavaPairRDD<String, List<Double>> s = javaFunctions(sc)
 				.cassandraTable("engagement", "hitchcockdatatotal",
 						mapRowTo(Hitchcockdatatotal.class))
 				.where("subject =?", "0")
-				.sortBy(new Function<Hitchcockdatatotal, Double>() {
-					@Override
-					public Double call(Hitchcockdatatotal v1) throws Exception {
-
-						return v1.getTime() + 0.0;
-					}
-				}, true, 1)
 				.mapToPair(
-						new PairFunction<Hitchcockdatatotal, String, List<Double>>() {
+						new PairFunction<Hitchcockdatatotal, String, List<Tuple2<Integer, Double>>>() {
 							/**
 							 * 
 							 */
 							private static final long serialVersionUID = 1L;
 
 							@Override
-							public Tuple2<String, List<Double>> call(
+							public Tuple2<String, List<Tuple2<Integer, Double>>> call(
 									Hitchcockdatatotal t) throws Exception {
 								// TODO Auto-generated method stub
-								ArrayList<Double> temp = new ArrayList<Double>();
-								temp.add(t.getData() + 0.0);
-								return new Tuple2<String, List<Double>>(t
-										.getID(), temp);
+								ArrayList<Tuple2<Integer, Double>> temp = new ArrayList<Tuple2<Integer, Double>>();
+								temp.add(new Tuple2<Integer, Double>(t.getTime(),t.getData() + 0.0));
+								return new Tuple2<String, List<Tuple2<Integer, Double>>>(
+										t.getID(), temp);
 							}
 						})
 				.reduceByKey(
-						new Function2<List<Double>, List<Double>, List<Double>>() {
+						new Function2<List<Tuple2<Integer, Double>>, List<Tuple2<Integer, Double>>, List<Tuple2<Integer, Double>>>() {
 							private static final long serialVersionUID = 1L;
 
 							@Override
-							public List<Double> call(List<Double> v1,
-									List<Double> v2) throws Exception {
-								ArrayList<Double> temp = new ArrayList<Double>();
+							public List<Tuple2<Integer, Double>> call(
+									List<Tuple2<Integer, Double>> v1,
+									List<Tuple2<Integer, Double>> v2)
+									throws Exception {
+								ArrayList<Tuple2<Integer, Double>> temp = new ArrayList<Tuple2<Integer, Double>>();
 								temp.addAll(v1);
 								temp.addAll(v2);
 								return temp;
 							}
-						}).sortByKey();
-						//.coalesce(2000).cache();
-		JavaPairRDD<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>> temp = s
+						})
+				.mapToPair(
+						new PairFunction<Tuple2<String, List<Tuple2<Integer, Double>>>, String, List<Double>>() {
+
+							@Override
+							public Tuple2<String, List<Double>> call(
+									Tuple2<String, List<Tuple2<Integer, Double>>> t)
+									throws Exception {
+								Collections.sort(t._2,
+										new TupleComparator<Double>());
+								ArrayList<Double> tempArray = new ArrayList<Double>();
+								for (Tuple2<Integer, Double> tupleEl : t._2) {
+									tempArray.add(tupleEl._2);
+								}
+								// TODO Auto-generated method stub
+								return new Tuple2<String, List<Double>>(t._1,
+										tempArray);
+							}
+
+						});
+		// .coalesce(2000).cache();
+		// taking the cartesian product of a id,listOfDoubleData pair.
+		JavaPairRDD<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>> cartProduct = s
 				.cartesian(s);
-		JavaRDD<Tuple2<String, Double>> corrData = temp
+		JavaRDD<Tuple2<String, Double>> corrData = cartProduct
 				.map(new Function<Tuple2<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>>, Tuple2<String, Double>>() {
 
 					@Override
@@ -197,7 +219,7 @@ public class HitchCockProcess implements Serializable {
 			e.printStackTrace();
 		} finally {
 			System.out.println("hitchcock process finished");
-			//s.unpersist();
+			// s.unpersist();
 		}
 
 		/*
@@ -225,6 +247,14 @@ public class HitchCockProcess implements Serializable {
 		 * .println("Data as CassandraRows after converting to vectors : \n" +
 		 * StringUtils.join(corrData.toArray(), "\n"));
 		 */
+	}
+
+	private class TupleComparator<E> implements Comparator<Tuple2<Integer, E>>,
+			Serializable {
+		@Override
+		public int compare(Tuple2<Integer, E> tuple1, Tuple2<Integer, E> tuple2) {
+			return tuple1._1 < tuple2._1 ? 0 : 1;
+		}
 	}
 
 	public double getPearsonCorrelation(List<Double> scores1,
@@ -322,10 +352,7 @@ public class HitchCockProcess implements Serializable {
 	}
 
 	public static void main(String args[]) {
-		
-		
-		
-		
+
 		/*
 		 * to set the username: .set("spark.cassandra.username", "cassandra")
 		 * //Optional to set the password: .set("spark.cassandra.password",
