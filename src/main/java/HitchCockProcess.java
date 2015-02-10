@@ -191,10 +191,10 @@ public class HitchCockProcess implements Serializable {
 										tempArray);
 							}
 
-						});
+						}).coalesce(200);
 		System.out.println("Mapping To Double list finished");
-		System.out.println("printing results:");
-		System.out.println("Data as CassandraRows after converting to double lists : \n" +StringUtils.join(s.toArray(), "\n"));
+		//System.out.println("printing results:");
+		//System.out.println("Data as CassandraRows after converting to double lists : \n" +StringUtils.join(s.toArray(), "\n"));
 		
 		// .coalesce(2000).cache();
 		// taking the cartesian product of a id,listOfDoubleData pair.
