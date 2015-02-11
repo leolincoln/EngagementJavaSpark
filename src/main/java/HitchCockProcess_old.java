@@ -33,39 +33,14 @@ import com.datastax.spark.connector.japi.SparkContextJavaFunctions;
 import com.google.common.collect.Lists;
 
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
-/**
- * This class is different from hitchcockprocess in the way
- * that it does not need cartesian product to calculate correlation
- * 
- * It creates a Vector of Vector of doubles for each time point, and then 
- * It uses MLLib's corr function to calculate the actual correlation. 
- * 
- * e,g,
- * t1 -- Vector<Double> ....
- * t2 -- Vector<Double> ....
- * .
- * .
- * .
- * tn -- Vector<Double> ...
- * 
- * JavaRDD<Vector> data = ... 
- * // note that each Vector is a row and not a column
-// calculate the correlation matrix using Pearson's method. Use "spearman" for Spearman's method.
-// If a method is not specified, Pearson's method will be used by default. 
-Matrix correlMatrix = Statistics.corr(data.rdd(), "pearson");
- * see: 
- * http://spark.apache.org/docs/1.2.0/api/java/org/apache/spark/mllib/stat/Statistics.html
- * 
- * @author leoliu
- *
- */
-public class HCProcessNoCart implements Serializable {
+
+public class HitchCockProcess_old implements Serializable {
 	private static final JavaDoubleRDD cassndraRowsRDD = null;
 	private transient SparkConf conf;
 
 	// private int xSize, ySize, zSize, subjectSize;
 
-	private HCProcessNoCart(SparkConf conf) {
+	private HitchCockProcess_old(SparkConf conf) {
 		this.conf = conf;
 
 	}
@@ -163,10 +138,10 @@ public class HCProcessNoCart implements Serializable {
 		// s stores all string->list(data) pairs. string is the id of the row.
 		JavaPairRDD<String, List<Double>> s = javaFunctions(sc)
 				.cassandraTable("engagement", "hitchcockdatatotal",
-						mapRowTo(Hitchcockdatatotal.class))
+						mapRowTo(Hitchcockdatatotal_old.class))
 				.where("subject =?", "0")
 				.mapToPair(
-						new PairFunction<Hitchcockdatatotal, String, List<Tuple2<Integer, Double>>>() {
+						new PairFunction<Hitchcockdatatotal_old, String, List<Tuple2<Integer, Double>>>() {
 							/**
 							 * 
 							 */
@@ -174,7 +149,7 @@ public class HCProcessNoCart implements Serializable {
 
 							@Override
 							public Tuple2<String, List<Tuple2<Integer, Double>>> call(
-									Hitchcockdatatotal t) throws Exception {
+									Hitchcockdatatotal_old t) throws Exception {
 								// TODO Auto-generated method stub
 								ArrayList<Tuple2<Integer, Double>> temp = new ArrayList<Tuple2<Integer, Double>>();
 								temp.add(new Tuple2<Integer, Double>(t
@@ -364,7 +339,7 @@ public class HCProcessNoCart implements Serializable {
 		conf.set("spark.cassandra.auth.username", "cassandra");
 		conf.set("spark.cassandra.auth.password", "cassandra");
 		conf.set("spark.executor.memory", "20g");
-		HCProcessNoCart app = new HCProcessNoCart(conf);
+		HitchCockProcess_old app = new HitchCockProcess_old(conf);
 		app.run();
 	}
 }
