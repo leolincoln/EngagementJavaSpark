@@ -191,7 +191,7 @@ public class HitchCockProcess implements Serializable {
 										tempArray);
 							}
 
-						}).coalesce(200);
+						});
 		System.out.println("Mapping To Double list finished");
 		//System.out.println("printing results:");
 		//System.out.println("Data as CassandraRows after converting to double lists : \n" +StringUtils.join(s.toArray(), "\n"));
@@ -199,7 +199,7 @@ public class HitchCockProcess implements Serializable {
 		// .coalesce(2000).cache();
 		// taking the cartesian product of a id,listOfDoubleData pair.
 		JavaPairRDD<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>> cartProduct = s
-				.cartesian(s);
+				.cartesian(s).coalesce(100);
 		JavaRDD<Tuple2<String, Double>> corrData = cartProduct
 				.map(new Function<Tuple2<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>>, Tuple2<String, Double>>() {
 
