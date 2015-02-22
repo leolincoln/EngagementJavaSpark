@@ -1,29 +1,36 @@
 import java.io.Serializable;
 
-public class Hitchcockdatatotal_old implements Serializable {
+public class Hitchcockdatatotal_new implements Serializable {
 	/**
 	 * generated serialization id
 	 */
 	private static final long serialVersionUID = 4614441050244688113L;
 	private Integer subject, time, x, y, z, data;
-	private String id;
+	private Integer id;
 
-	public Hitchcockdatatotal_old(Integer x, Integer y, Integer z,
-			Integer subject, Integer time, Integer data) {
+	public Hitchcockdatatotal_new(Integer x, Integer y, Integer z, Integer subject,
+			Integer time, Integer data) {
 		this.subject = subject;
 		this.time = time;
 		this.x = x;
 		this.y = y;
 		this.z = z;
 		this.data = data;
-		this.id = x + "|" + y + "|" + z + "|" + subject;
+		this.id = subject * 100000000 + x * 1000000 + y * 10000 + z * 100;
 	}
 
 	public void setSubject(Integer subject) {
 		this.subject = subject;
 	}
 
-	public String getID() {
+	/**
+	 * getID is the unique identifier of the string. Supposedly, for each
+	 * hitchcock data, there is no more than 100 x y z subject then we space out
+	 * each variable by 100 to the power of something.
+	 * 
+	 * @return the unique Integer ID for this row. 
+	 */
+	public Integer getID() {
 		return this.id;
 	}
 
