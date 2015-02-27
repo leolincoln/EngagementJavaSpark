@@ -1,13 +1,19 @@
 import java.io.Serializable;
 
 public class HcResults implements Serializable {
+	Integer subject;
 	String id1, id2;
 	Double corr;
 
-	public HcResults(String id1, String id2, Double corr) {
+	public HcResults(Integer subject, String id1, String id2, Double corr) {
+		this.subject = subject;
 		this.id1 = id1;
 		this.id2 = id2;
 		this.corr = corr;
+	}
+
+	public void setSubject(Integer subject) {
+		this.subject = subject;
 	}
 
 	public void setId1(String id1) {
@@ -20,6 +26,10 @@ public class HcResults implements Serializable {
 
 	public void setCor(Double corr) {
 		this.corr = corr;
+	}
+
+	public Integer getSubject() {
+		return this.subject;
 	}
 
 	public String getId1() {

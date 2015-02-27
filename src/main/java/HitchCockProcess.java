@@ -37,7 +37,7 @@ import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
 public class HitchCockProcess implements Serializable {
 	private static final JavaDoubleRDD cassndraRowsRDD = null;
 	private transient SparkConf conf;
-
+	private Integer subjectNum = 0;
 	// private int xSize, ySize, zSize, subjectSize;
 
 	private HitchCockProcess(SparkConf conf) {
@@ -137,10 +137,11 @@ public class HitchCockProcess implements Serializable {
 		// javaFunctions(sc).cassandraTable("engagement","hitchcockdatatotal");
 		// s stores all string->list(data) pairs. string is the id of the row.
 		final long startTime_mapping = System.currentTimeMillis();
+		
 		JavaPairRDD<String, List<Double>> s = javaFunctions(sc)
 				.cassandraTable("engagement", "hitchcockdatatotal",
 						mapRowTo(Hitchcockdatatotal.class))
-				.where("subject =?", "0")
+				.where("subject =?", subjectNum)
 				.mapToPair(
 						new PairFunction<Hitchcockdatatotal, String, List<Tuple2<Integer, Double>>>() {
 							/**
@@ -210,11 +211,11 @@ public class HitchCockProcess implements Serializable {
 				+ (endTime_cartesian - startTime_cartesian));
 
 		final long startTime_corr = System.currentTimeMillis();
-		JavaRDD<Tuple2<String, Double>> corrData = cartProduct
-				.map(new Function<Tuple2<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>>, Tuple2<String, Double>>() {
+		JavaRDD<HcResults> corrData = cartProduct
+				.map(new Function<Tuple2<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>>, HcResults>() {
 
 					@Override
-					public Tuple2<String, Double> call(
+					public HcResults call(
 							Tuple2<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>> t)
 							throws Exception {
 						// .toArray(new Double(t._1._2.size()))
@@ -222,37 +223,37 @@ public class HitchCockProcess implements Serializable {
 						Double c = pc.correlation(getDoubleArray(t._1._2),
 								getDoubleArray(t._2._2));
 						// TODO Auto-generated method stub
-						return new Tuple2<String, Double>(t._1._1 + ":"
-								+ t._2._1, c);
+						return new HcResults(subjectNum,t._1._1, t._2._1, c);
 					}
 				});
 		final long endTime_corr = System.currentTimeMillis();
-		System.out.println("cartesian finished. Time: "
+		System.out.println("corrData finished. Time: "
 				+ (endTime_corr - startTime_corr));
 		final long startTime_writingCorr = System.currentTimeMillis();
-		
-			/*
-			
-			FileWriter fw = new FileWriter("corrResults.txt", false);
-			BufferedWriter bf = new BufferedWriter(fw);
-			bf.write(corrData.toArray().toString());
-			bf.close();
-			fw.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			System.out.println("hitchcock process finished");
-			final long endTime_writingCorr = System.currentTimeMillis();
-			System.out.println("cartesian writing finished. Time: "
-					+ (endTime_writingCorr - startTime_writingCorr));
-			// s.unpersist();
-		}
-		
+
+		javaFunctions(corrData).writerBuilder(sc.getConf().get("keyspaceName"),
+				sc.getConf().get("tableName"), mapToRow(HcResults.class))
+				.saveToCassandra();
+		;
+		final long endTime_writingCorr = System.currentTimeMillis();
+		System.out.println("writing corr finished. Time: "
+				+ (endTime_writingCorr - startTime_writingCorr));
 
 		/*
-		 * JavaPairRDD<String, ArrayList<Integer>> arrayS0 = s0 .reduceByKey(new
-		 * Function2<ArrayList<Integer>, Integer, Integer>() {
+		 * 
+		 * FileWriter fw = new FileWriter("corrResults.txt", false);
+		 * BufferedWriter bf = new BufferedWriter(fw);
+		 * bf.write(corrData.toArray().toString()); bf.close(); fw.close(); }
+		 * catch (IOException e) { // TODO Auto-generated catch block
+		 * e.printStackTrace(); } finally {
+		 * System.out.println("hitchcock process finished"); final long
+		 * endTime_writingCorr = System.currentTimeMillis();
+		 * System.out.println("cartesian writing finished. Time: " +
+		 * (endTime_writingCorr - startTime_writingCorr)); // s.unpersist(); }
+		 * 
+		 * 
+		 * /* JavaPairRDD<String, ArrayList<Integer>> arrayS0 = s0
+		 * .reduceByKey(new Function2<ArrayList<Integer>, Integer, Integer>() {
 		 * 
 		 * @Override public Integer call(ArrayList<Integer> v1, Integer v2)
 		 * throws Exception { // TODO Auto-generated method stub return null; }
@@ -359,6 +360,8 @@ public class HitchCockProcess implements Serializable {
 		conf.set("spark.cassandra.auth.username", "cassandra");
 		conf.set("spark.cassandra.auth.password", "cassandra");
 		conf.set("spark.executor.memory", "20g");
+		conf.set("keyspaceName", "engagement");
+		conf.set("tableName", "hitchcockdatacorrresults");
 		HitchCockProcess app = new HitchCockProcess(conf);
 		app.run();
 	}
