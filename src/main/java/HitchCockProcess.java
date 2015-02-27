@@ -139,7 +139,7 @@ public class HitchCockProcess implements Serializable {
 		final long startTime_mapping = System.currentTimeMillis();
 		
 		JavaPairRDD<String, List<Double>> s = javaFunctions(sc)
-				.cassandraTable("engagement", "hitchcockdatatotal",
+				.cassandraTable("engagement", "piemandatatotal",
 						mapRowTo(Hitchcockdatatotal.class))
 				.where("subject =?", subjectNum)
 				.mapToPair(
@@ -222,7 +222,6 @@ public class HitchCockProcess implements Serializable {
 						PearsonsCorrelation pc = new PearsonsCorrelation();
 						Double c = pc.correlation(getDoubleArray(t._1._2),
 								getDoubleArray(t._2._2));
-						// TODO Auto-generated method stub
 						return new HcResults(subjectNum,t._1._1, t._2._1, c);
 					}
 				});
@@ -361,7 +360,7 @@ public class HitchCockProcess implements Serializable {
 		conf.set("spark.cassandra.auth.password", "cassandra");
 		conf.set("spark.executor.memory", "20g");
 		conf.set("keyspaceName", "engagement");
-		conf.set("tableName", "hitchcockdatacorrresults");
+		conf.set("tableName", "piemandatacorrresults");
 		HitchCockProcess app = new HitchCockProcess(conf);
 		app.run();
 	}
