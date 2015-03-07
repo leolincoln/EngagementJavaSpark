@@ -1,17 +1,17 @@
 import java.io.Serializable;
+import java.util.ArrayList;
 
-public class Hitchcockdatatotal implements Serializable {
-	/**
-	 * generated serialization id
-	 */
+public class HcList implements Serializable {
+
 	private static final long serialVersionUID = 4614441050244688113L;
-	private Integer subject, time, x, y, z, data;
-	private String id;
+	private Integer subject, x, y, z;
 
-	public Hitchcockdatatotal(Integer x, Integer y, Integer z,
-			Integer subject, Integer time, Integer data) {
+	private String id;
+	private ArrayList<Integer> data;
+
+	public HcList(Integer x, Integer y, Integer z, Integer subject,
+			ArrayList<Integer> data) {
 		this.subject = subject;
-		this.time = time;
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -29,14 +29,6 @@ public class Hitchcockdatatotal implements Serializable {
 
 	public Integer getSubject() {
 		return this.subject;
-	}
-
-	public void setTime(Integer time) {
-		this.time = time;
-	}
-
-	public Integer getTime() {
-		return this.time;
 	}
 
 	public void setX(Integer x) {
@@ -63,16 +55,12 @@ public class Hitchcockdatatotal implements Serializable {
 		return this.z;
 	}
 
-	public void setData(Integer data) {
+	public void setData(ArrayList<Integer> data) {
 		this.data = data;
 	}
 
-	public Integer getData() {
+	public ArrayList<Integer> getData() {
 		return this.data;
 	}
 
-	@Override
-	public String toString() {
-		return subject + " " + time + " " + x + " " + y + " " + z + " " + data;
-	}
 }

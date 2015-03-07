@@ -1,3 +1,4 @@
+package old_codes;
 import java.io.Serializable;
 
 public class HcResults implements Serializable {

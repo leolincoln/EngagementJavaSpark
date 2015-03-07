@@ -1,3 +1,4 @@
+package old_codes;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -23,6 +24,7 @@ import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.stat.Statistics;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
+
 import scala.Tuple2;
 
 import com.datastax.driver.core.Session;
@@ -34,18 +36,19 @@ import com.google.common.collect.Lists;
 
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
 
-public class HitchCockProcess implements Serializable {
+public class HitchCockProcess_new implements Serializable {
 	private static final JavaDoubleRDD cassndraRowsRDD = null;
 	private transient SparkConf conf;
-	private Integer subjectNum = 0;
+
 	// private int xSize, ySize, zSize, subjectSize;
 
-	private HitchCockProcess(SparkConf conf) {
+	private HitchCockProcess_new(SparkConf conf) {
 		this.conf = conf;
 
 	}
 
 	private void run() {
+		System.out.println("running the new hitchcockprocess");
 		JavaSparkContext sc = new JavaSparkContext(conf);
 		// this.xSize = getXSize(sc);
 		// this.ySize = getYSize(sc);
@@ -97,15 +100,15 @@ public class HitchCockProcess implements Serializable {
 
 	public int getXSize(JavaSparkContext sc) {
 		JavaRDD<CassandraRow> xS = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatatotal").select("x")
-				.distinct();
+				.cassandraTable("engagement", "hitchcockdatatotal2")
+				.select("x").distinct();
 		System.out.println("X size: " + xS.count());
 		return (int) xS.count();
 	}
 
 	public int getYSize(JavaSparkContext sc) {
 		JavaRDD<CassandraRow> yS = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatatotal")
+				.cassandraTable("engagement", "hitchcockdatatotal2")
 				.where("x=?", "0").select("y").distinct();
 		System.out.println("Y size: " + yS.count());
 		return (int) yS.count();
@@ -136,28 +139,26 @@ public class HitchCockProcess implements Serializable {
 		// JavaPairRDD<Hitchcockdatatotal,Integer> newRDD =
 		// javaFunctions(sc).cassandraTable("engagement","hitchcockdatatotal");
 		// s stores all string->list(data) pairs. string is the id of the row.
-		final long startTime_mapping = System.currentTimeMillis();
-		
-		JavaPairRDD<String, List<Double>> s = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatatotal",
-						mapRowTo(Hitchcockdatatotal.class))
-				.where("subject =?", subjectNum)
+		JavaRDD<Vector> s = javaFunctions(sc)
+				.cassandraTable("engagement", "hitchcockdatatotal",
+						mapRowTo(Hitchcockdatatotal_new.class))
+				.where("subject =?", "0")
 				.mapToPair(
-						new PairFunction<Hitchcockdatatotal, String, List<Tuple2<Integer, Double>>>() {
+						new PairFunction<Hitchcockdatatotal_new, Integer, List<Tuple2<Integer, Double>>>() {
 							/**
 							 * 
 							 */
 							private static final long serialVersionUID = 1L;
 
 							@Override
-							public Tuple2<String, List<Tuple2<Integer, Double>>> call(
-									Hitchcockdatatotal t) throws Exception {
+							public Tuple2<Integer, List<Tuple2<Integer, Double>>> call(
+									Hitchcockdatatotal_new t) throws Exception {
 								// TODO Auto-generated method stub
 								ArrayList<Tuple2<Integer, Double>> temp = new ArrayList<Tuple2<Integer, Double>>();
-								temp.add(new Tuple2<Integer, Double>(t
-										.getTime(), t.getData() + 0.0));
-								return new Tuple2<String, List<Tuple2<Integer, Double>>>(
-										t.getID(), temp);
+								temp.add(new Tuple2<Integer, Double>(t.getID(),
+										t.getData() + 0.0));
+								return new Tuple2<Integer, List<Tuple2<Integer, Double>>>(
+										t.getTime(), temp);
 							}
 						})
 				.reduceByKey(
@@ -176,11 +177,11 @@ public class HitchCockProcess implements Serializable {
 							}
 						})
 				.mapToPair(
-						new PairFunction<Tuple2<String, List<Tuple2<Integer, Double>>>, String, List<Double>>() {
+						new PairFunction<Tuple2<Integer, List<Tuple2<Integer, Double>>>, Integer, List<Double>>() {
 
 							@Override
-							public Tuple2<String, List<Double>> call(
-									Tuple2<String, List<Tuple2<Integer, Double>>> t)
+							public Tuple2<Integer, List<Double>> call(
+									Tuple2<Integer, List<Tuple2<Integer, Double>>> t)
 									throws Exception {
 								Collections.sort(t._2,
 										new TupleComparator<Double>());
@@ -189,70 +190,45 @@ public class HitchCockProcess implements Serializable {
 									tempArray.add(tupleEl._2);
 								}
 								// TODO Auto-generated method stub
-								return new Tuple2<String, List<Double>>(t._1,
+								return new Tuple2<Integer, List<Double>>(t._1,
 										tempArray);
 							}
 
-						});
-		final long endTime_mapping = System.currentTimeMillis();
-		System.out.println("Mapping To Double list finished, time is: "
-				+ (endTime_mapping - startTime_mapping));
+						}).sortByKey()
+				.map(new Function<Tuple2<Integer, List<Double>>, Vector>() {
+
+					@Override
+					public Vector call(Tuple2<Integer, List<Double>> v1)
+							throws Exception {
+						return Vectors.dense(getDoubleArray(v1._2));
+					}
+				});
+		System.out.println("Mapping To Double list finished");
 		// System.out.println("printing results:");
 		// System.out.println("Data as CassandraRows after converting to double lists : \n"
 		// +StringUtils.join(s.toArray(), "\n"));
 
 		// .coalesce(2000).cache();
 		// taking the cartesian product of a id,listOfDoubleData pair.
-		final long startTime_cartesian = System.currentTimeMillis();
-		JavaPairRDD<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>> cartProduct = s
-				.cartesian(s).coalesce(100);
-		final long endTime_cartesian = System.currentTimeMillis();
-		System.out.println("cartesian finished, time: "
-				+ (endTime_cartesian - startTime_cartesian));
 
-		final long startTime_corr = System.currentTimeMillis();
-		JavaRDD<HcResults> corrData = cartProduct
-				.map(new Function<Tuple2<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>>, HcResults>() {
-
-					@Override
-					public HcResults call(
-							Tuple2<Tuple2<String, List<Double>>, Tuple2<String, List<Double>>> t)
-							throws Exception {
-						// .toArray(new Double(t._1._2.size()))
-						PearsonsCorrelation pc = new PearsonsCorrelation();
-						Double c = pc.correlation(getDoubleArray(t._1._2),
-								getDoubleArray(t._2._2));
-						return new HcResults(subjectNum,t._1._1, t._2._1, c);
-					}
-				});
-		final long endTime_corr = System.currentTimeMillis();
-		System.out.println("corrData finished. Time: "
-				+ (endTime_corr - startTime_corr));
-		final long startTime_writingCorr = System.currentTimeMillis();
-
-		javaFunctions(corrData).writerBuilder(sc.getConf().get("keyspaceName"),
-				sc.getConf().get("tableName"), mapToRow(HcResults.class))
-				.saveToCassandra();
-		;
-		final long endTime_writingCorr = System.currentTimeMillis();
-		System.out.println("writing corr finished. Time: "
-				+ (endTime_writingCorr - startTime_writingCorr));
+		Matrix correlMatrix = Statistics.corr(s.rdd(), "pearson");
+		try {
+			FileWriter fw = new FileWriter("corrResults.txt", false);
+			BufferedWriter bf = new BufferedWriter(fw);
+			bf.write(correlMatrix.toArray().toString());
+			bf.close();
+			fw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			System.out.println("hitchcock process finished");
+			// s.unpersist();
+		}
 
 		/*
-		 * 
-		 * FileWriter fw = new FileWriter("corrResults.txt", false);
-		 * BufferedWriter bf = new BufferedWriter(fw);
-		 * bf.write(corrData.toArray().toString()); bf.close(); fw.close(); }
-		 * catch (IOException e) { // TODO Auto-generated catch block
-		 * e.printStackTrace(); } finally {
-		 * System.out.println("hitchcock process finished"); final long
-		 * endTime_writingCorr = System.currentTimeMillis();
-		 * System.out.println("cartesian writing finished. Time: " +
-		 * (endTime_writingCorr - startTime_writingCorr)); // s.unpersist(); }
-		 * 
-		 * 
-		 * /* JavaPairRDD<String, ArrayList<Integer>> arrayS0 = s0
-		 * .reduceByKey(new Function2<ArrayList<Integer>, Integer, Integer>() {
+		 * JavaPairRDD<String, ArrayList<Integer>> arrayS0 = s0 .reduceByKey(new
+		 * Function2<ArrayList<Integer>, Integer, Integer>() {
 		 * 
 		 * @Override public Integer call(ArrayList<Integer> v1, Integer v2)
 		 * throws Exception { // TODO Auto-generated method stub return null; }
@@ -291,7 +267,7 @@ public class HitchCockProcess implements Serializable {
 			Serializable {
 		@Override
 		public int compare(Tuple2<Integer, E> tuple1, Tuple2<Integer, E> tuple2) {
-			return tuple1._1 < tuple2._1 ? 0 : 1;
+			return tuple1._1 - tuple2._1;
 		}
 	}
 
@@ -359,9 +335,7 @@ public class HitchCockProcess implements Serializable {
 		conf.set("spark.cassandra.auth.username", "cassandra");
 		conf.set("spark.cassandra.auth.password", "cassandra");
 		conf.set("spark.executor.memory", "20g");
-		conf.set("keyspaceName", "engagement");
-		conf.set("tableName", "piemandatacorrresults");
-		HitchCockProcess app = new HitchCockProcess(conf);
+		HitchCockProcess_new app = new HitchCockProcess_new(conf);
 		app.run();
 	}
 }
