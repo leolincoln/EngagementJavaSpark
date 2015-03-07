@@ -1,5 +1,6 @@
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 public class HcList implements Serializable {
 
@@ -59,7 +60,7 @@ public class HcList implements Serializable {
 		this.data = data;
 	}
 
-	public ArrayList<Integer> getData() {
+	public List<Integer> getData() {
 		return this.data;
 	}
 
