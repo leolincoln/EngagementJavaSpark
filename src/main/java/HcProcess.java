@@ -141,7 +141,7 @@ public class HcProcess implements Serializable {
 		final long startTime_mapping = System.currentTimeMillis();
 
 		JavaPairRDD<String, List<Integer>> s = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatatotal",
+				.cassandraTable("engagement", "piemandatalist",
 						mapRowTo(HcList.class)).mapToPair(
 						new PairFunction<HcList, String, List<Integer>>() {
 							/**
@@ -152,8 +152,6 @@ public class HcProcess implements Serializable {
 							@Override
 							public Tuple2<String, List<Integer>> call(HcList t)
 									throws Exception {
-								// TODO Auto-generated method stub
-
 								return new Tuple2<String, List<Integer>>(t
 										.getID(), t.getData());
 							}

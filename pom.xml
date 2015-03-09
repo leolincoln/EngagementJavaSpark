@@ -100,7 +100,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>HitchCockProcess</mainClass>
+							<mainClass>HcProcess</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
