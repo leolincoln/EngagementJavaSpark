@@ -99,7 +99,7 @@ public class HcProcess implements Serializable {
 
 	public int getXSize(JavaSparkContext sc) {
 		JavaRDD<CassandraRow> xS = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatatotal").select("x")
+				.cassandraTable("engagement", "piemandatalist").select("x")
 				.distinct();
 		System.out.println("X size: " + xS.count());
 		return (int) xS.count();
@@ -107,16 +107,17 @@ public class HcProcess implements Serializable {
 
 	public int getYSize(JavaSparkContext sc) {
 		JavaRDD<CassandraRow> yS = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatatotal")
-				.where("x=?", "0").select("y").distinct();
+				.cassandraTable("engagement", "piemandatalist")
+				.where("x=? and subject=?", "0", "0").select("y").distinct();
 		System.out.println("Y size: " + yS.count());
 		return (int) yS.count();
 	}
 
 	public int getZSize(JavaSparkContext sc) {
 		JavaRDD<CassandraRow> zS = javaFunctions(sc)
-				.cassandraTable("engagement", "hitchcockdatatotal2")
-				.where("x=? and y=?", "0", "0").select("z").distinct();
+				.cassandraTable("engagement", "piemandatalist")
+				.where("x=? and subject=? and y=?", "0", "0", "0").select("z")
+				.distinct();
 		System.out.println("Z size: " + zS.count());
 		return (int) zS.count();
 	}
@@ -135,13 +136,17 @@ public class HcProcess implements Serializable {
 	 *            -- JavaSparkContext passed from main.
 	 */
 	public void testGetData(JavaSparkContext sc) {
+
+
+
 		// JavaPairRDD<Hitchcockdatatotal,Integer> newRDD =
 		// javaFunctions(sc).cassandraTable("engagement","hitchcockdatatotal");
-		// s stores all string->list(data) pairs. string is the id of the row.
+		// s stores all string->list(data) pairs. string is the id of the
+		// row.
 		final long startTime_mapping = System.currentTimeMillis();
 
 		JavaPairRDD<String, List<Integer>> s = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatalist",
+				.cassandraTable("engagement", "piemandata"+subjectNum,
 						mapRowTo(HcList.class)).mapToPair(
 						new PairFunction<HcList, String, List<Integer>>() {
 							/**
@@ -307,14 +312,14 @@ public class HcProcess implements Serializable {
 	}
 
 	public static void main(String args[]) {
-
+	
 		/*
 		 * to set the username: .set("spark.cassandra.username", "cassandra")
 		 * //Optional to set the password: .set("spark.cassandra.password",
 		 * "cassandra") //Optional
 		 */
 		SparkConf conf = new SparkConf();
-		conf.setAppName("hitchcockprocess");
+		conf.setAppName("HcProcess");
 		// local[4] is not a spark cluster.
 		conf.setMaster("spark://wolf.iems.northwestern.edu:7077");
 		// cub0 is the cassandra cluster
