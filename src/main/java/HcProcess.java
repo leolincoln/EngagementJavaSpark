@@ -47,7 +47,7 @@ public class HcProcess implements Serializable {
 
 	}
 
-	private void run() {
+	private synchronized void run() {
 		JavaSparkContext sc = new JavaSparkContext(conf);
 		// this.xSize = getXSize(sc);
 		// this.ySize = getYSize(sc);
@@ -174,7 +174,7 @@ public class HcProcess implements Serializable {
 		// taking the cartesian product of a id,listOfDoubleData pair. final
 		long startTime_cartesian = System.currentTimeMillis();
 		JavaPairRDD<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>> cartProduct = s
-				.cartesian(s).coalesce(400000, false);
+				.cartesian(s);
 		// System.out.println("cartData: ");
 		// System.out.println(StringUtils.join(cartProduct.toArray(), "\n"));
 		final long endTime_cartesian = System.currentTimeMillis();
@@ -197,7 +197,7 @@ public class HcProcess implements Serializable {
 						return new HcResults(subjectNum, t._1._1, t._2._1, c);
 					}
 				});
-		// System.out.println("corrData: ");
+				// System.out.println("corrData: ");
 		// System.out.println(StringUtils.join(corrData.toArray(), "\n"));
 		// corrData.coalesce(20000);
 		final long endTime_corr = System.currentTimeMillis();
@@ -257,7 +257,8 @@ public class HcProcess implements Serializable {
 		// conf.set("spark.task.maxFailures", "100");
 		conf.set("keyspaceName", "engagement");
 		conf.set("tableName", "piemandatacorrresults");
-		//conf.set("spark.cassandra.input.page.row.size", "200");
+		conf.set("spark.cassandra.input.page.row.size", "2000");
+		conf.set("spark.cassandra.input.split.size","2000");
 		// concurrent writes for cassandra is specified in cassandra.yaml which
 		// has 32 as the max value.
 		//conf.set("spark.cassandra.output.concurrent.writes", "1");
