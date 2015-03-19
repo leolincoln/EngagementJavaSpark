@@ -135,9 +135,7 @@ public class HcProcess implements Serializable {
 	 * @param sc
 	 *            -- JavaSparkContext passed from main.
 	 */
-	public void testGetData(JavaSparkContext sc) {
-
-
+	public synchronized void testGetData(JavaSparkContext sc) {
 
 		// JavaPairRDD<Hitchcockdatatotal,Integer> newRDD =
 		// javaFunctions(sc).cassandraTable("engagement","hitchcockdatatotal");
@@ -145,40 +143,46 @@ public class HcProcess implements Serializable {
 		// row.
 		final long startTime_mapping = System.currentTimeMillis();
 
+		/*
+		 * JavaRDD<String> rdd = javaFunctions(sc).cassandraTable("engagement",
+		 * "test", mapRowTo(Test.class)).map(new Function<Test, String>() {
+		 * 
+		 * @Override public String call(Test test) throws Exception { return
+		 * test.toString(); } }); System.out.println("testData: \n" +
+		 * StringUtils.join(rdd.toArray(), "\n"));
+		 */
+
 		JavaPairRDD<String, List<Integer>> s = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandata"+subjectNum,
-						mapRowTo(HcList.class)).mapToPair(
-						new PairFunction<HcList, String, List<Integer>>() {
-							/**
-							 * 
-							 */
-							private static final long serialVersionUID = 1L;
+				.cassandraTable("engagement", "piemandata" + subjectNum,
+						mapRowTo(HcList.class)).
+				mapToPair(new PairFunction<HcList, String, List<Integer>>() {
+					private static final long serialVersionUID = 1L;
 
-							@Override
-							public Tuple2<String, List<Integer>> call(HcList t)
-									throws Exception {
-								return new Tuple2<String, List<Integer>>(t
-										.getID(), t.getData());
-							}
-						});
-
+					@Override
+					public Tuple2<String, List<Integer>> call(HcList t)
+							throws Exception {
+						return new Tuple2<String, List<Integer>>(t.getID(), t
+								.getData());
+					}
+				});
+		// System.out.println("results from table: ");
+		// System.out.println(StringUtils.join(s.toArray(), "\n"));
 		final long endTime_mapping = System.currentTimeMillis();
 		System.out.println("Mapping To Double list finished, time is: "
 				+ (endTime_mapping - startTime_mapping));
-		// System.out.println("printing results:");
-		// System.out.println("Data as CassandraRows after converting to double lists : \n"
-		// +StringUtils.join(s.toArray(), "\n"));
 
-		// .coalesce(2000).cache();
-		// taking the cartesian product of a id,listOfDoubleData pair.
-		final long startTime_cartesian = System.currentTimeMillis();
+		// taking the cartesian product of a id,listOfDoubleData pair. final
+		long startTime_cartesian = System.currentTimeMillis();
 		JavaPairRDD<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>> cartProduct = s
-				.cartesian(s).coalesce(100);
+				.cartesian(s).coalesce(400000, false);
+		// System.out.println("cartData: ");
+		// System.out.println(StringUtils.join(cartProduct.toArray(), "\n"));
 		final long endTime_cartesian = System.currentTimeMillis();
 		System.out.println("cartesian finished, time: "
 				+ (endTime_cartesian - startTime_cartesian));
 
 		final long startTime_corr = System.currentTimeMillis();
+		
 		JavaRDD<HcResults> corrData = cartProduct
 				.map(new Function<Tuple2<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>>, HcResults>() {
 
@@ -193,11 +197,14 @@ public class HcProcess implements Serializable {
 						return new HcResults(subjectNum, t._1._1, t._2._1, c);
 					}
 				});
+		// System.out.println("corrData: ");
+		// System.out.println(StringUtils.join(corrData.toArray(), "\n"));
+		// corrData.coalesce(20000);
 		final long endTime_corr = System.currentTimeMillis();
 		System.out.println("corrData finished. Time: "
 				+ (endTime_corr - startTime_corr));
 		final long startTime_writingCorr = System.currentTimeMillis();
-
+		System.out.println("starting writing output to corrdata table");
 		javaFunctions(corrData).writerBuilder(sc.getConf().get("keyspaceName"),
 				sc.getConf().get("tableName"), mapToRow(HcResults.class))
 				.saveToCassandra();
@@ -206,46 +213,9 @@ public class HcProcess implements Serializable {
 		System.out.println("writing corr finished. Time: "
 				+ (endTime_writingCorr - startTime_writingCorr));
 
-		/*
-		 * 
-		 * FileWriter fw = new FileWriter("corrResults.txt", false);
-		 * BufferedWriter bf = new BufferedWriter(fw);
-		 * bf.write(corrData.toArray().toString()); bf.close(); fw.close(); }
-		 * catch (IOException e) { // TODO Auto-generated catch block
-		 * e.printStackTrace(); } finally {
-		 * System.out.println("hitchcock process finished"); final long
-		 * endTime_writingCorr = System.currentTimeMillis();
-		 * System.out.println("cartesian writing finished. Time: " +
-		 * (endTime_writingCorr - startTime_writingCorr)); // s.unpersist(); }
-		 * 
-		 * 
-		 * /* JavaPairRDD<String, ArrayList<Integer>> arrayS0 = s0
-		 * .reduceByKey(new Function2<ArrayList<Integer>, Integer, Integer>() {
-		 * 
-		 * @Override public Integer call(ArrayList<Integer> v1, Integer v2)
-		 * throws Exception { // TODO Auto-generated method stub return null; }
-		 * 
-		 * }); /* JavaRDD<String> cassandraRowsRDD = javaFunctions(sc)
-		 * .cassandraTable("engagement", "hitchcockdatatotal")
-		 * .where("x=? and y=? and z=? and subject=? ", "0", "0", "0",
-		 * "17").map(new Function<CassandraRow, String>() {
-		 * 
-		 * @Override public String call(CassandraRow cassandraRow) throws
-		 * Exception { return cassandraRow.toString(); } });
-		 * 
-		 * /* System.out.println("Data as CassandraRows at 0,0,0,17: \n" +
-		 * StringUtils.join(cassndraRowsRDD.toArray(), "\n"));
-		 */
-		/*
-		 * System.out
-		 * .println("Data as CassandraRows at subject=0 and time=0: \n" +
-		 * StringUtils.join(s.toArray(), "\n")); System.out
-		 * .println("Data as CassandraRows after converting to vectors : \n" +
-		 * StringUtils.join(corrData.toArray(), "\n"));
-		 */
 	}
 
-	private double[] getDoubleArray(List<Integer> inArray) {
+	private synchronized double[] getDoubleArray(List<Integer> inArray) {
 		double[] result = new double[inArray.size()];
 		int i = 0;
 		for (int el : inArray) {
@@ -263,56 +233,11 @@ public class HcProcess implements Serializable {
 		}
 	}
 
-	/*
-	 * public void gatherData(JavaSparkContext sc, JavaRDD<Hitchcockdatatotal>
-	 * rdd1, JavaRDD<Hitchcockdatatotal> rdd2) { JavaRDD<String>
-	 * cassandraRowsRDD1 = javaFunctions(sc) .cassandraTable("engagement",
-	 * "hitchcocktotal") .where("x=? AND y=? AND z=? ", 1, 2, 3) .map(new
-	 * Function<CassandraRow, String>() {
-	 * 
-	 * @Override public String call(CassandraRow cassandraRow) throws Exception
-	 * { return cassandraRow.toString(); } }); JavaRDD<String> cassandraRowsRDD2
-	 * = javaFunctions(sc) .cassandraTable("engagement", "hitchcocktotal")
-	 * .where("x=? AND y=? AND z=? ", 1, 2, 3) .map(new Function<CassandraRow,
-	 * String>() {
-	 * 
-	 * @Override public String call(CassandraRow cassandraRow) throws Exception
-	 * { return cassandraRow.toString(); } });
-	 * System.out.println("Data as CassandraRows: \n" +
-	 * StringUtils.join(cassandraRowsRDD1.toArray(), "\n"));
-	 */
-	// another way to read in data:
-
-	/*
-	 * rdd1 = javaFunctions(sc).cassandraTable("engagement", "hitchcocktotal")
-	 * .where("x=? AND y=? AND z=? ", 1, 2, 3) .map(new Function<CassandraRow,
-	 * String>() {
-	 * 
-	 * @Override public String call(CassandraRow cassandraRow) throws Exception
-	 * { return cassandraRow.toString(); } }); rdd2 =
-	 * javaFunctions(sc).cassandraTable("engagement", "hitchcocktotal")
-	 * .where("x=? AND y=? AND z=? ", 2, 3, 4) .map(new Function<CassandraRow,
-	 * String>() {
-	 * 
-	 * @Override public String call(CassandraRow cassandraRow) throws Exception
-	 * { return cassandraRow.toString(); } });
-	 * 
-	 * 
-	 * } /* private void compute(JavaSparkContext sc,
-	 * JavaRDD<Hitchcockdatatotal> rdd1, JavaRDD<Hitchcockdatatotal> rdd2) {
-	 * 
-	 * // compute the correlation using Pearson's method. Enter "spearman" for
-	 * // Spearman's method. If a // method is not specified, Pearson's method
-	 * will be used by default. // Double correlation =
-	 * Statistics.corr(rdd1.rdd(), rdd2.rdd(), // "pearson");
-	 * 
-	 * }
-	 */
 	private void showResults(JavaSparkContext sc) {
 	}
 
-	public static void main(String args[]) {
-	
+	public synchronized static void main(String args[]) {
+
 		/*
 		 * to set the username: .set("spark.cassandra.username", "cassandra")
 		 * //Optional to set the password: .set("spark.cassandra.password",
@@ -323,12 +248,21 @@ public class HcProcess implements Serializable {
 		// local[4] is not a spark cluster.
 		conf.setMaster("spark://wolf.iems.northwestern.edu:7077");
 		// cub0 is the cassandra cluster
-		conf.set("spark.cassandra.connection.host", "cub0");
+		conf.set("spark.cassandra.username", "cassandra"); // Optional
+		conf.set("spark.cassandra.password", "cassandra"); // Optional
+		conf.set("spark.cassandra.connection.host", "cub0,cub2,cub3,cub1");
 		conf.set("spark.cassandra.auth.username", "cassandra");
 		conf.set("spark.cassandra.auth.password", "cassandra");
-		conf.set("spark.executor.memory", "20g");
+		conf.set("spark.executor.memory", "10g");
+		// conf.set("spark.task.maxFailures", "100");
 		conf.set("keyspaceName", "engagement");
 		conf.set("tableName", "piemandatacorrresults");
+		//conf.set("spark.cassandra.input.page.row.size", "200");
+		// concurrent writes for cassandra is specified in cassandra.yaml which
+		// has 32 as the max value.
+		//conf.set("spark.cassandra.output.concurrent.writes", "1");
+		// optional
+		// conf.set("spark.cassandra.output.batch.size.rows", "1");
 		HcProcess app = new HcProcess(conf);
 		app.run();
 	}

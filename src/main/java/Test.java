@@ -1,26 +1,17 @@
-import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-public class HcList implements Serializable {
-
-	private static final long serialVersionUID = 4614441050244688113L;
+public class Test {
 	private Integer x, y, z;
-
-	private String id;
 	private List<Integer> data;
 
-	public HcList(Integer x, Integer y, Integer z, List<Integer> data) {
+	public Test(Integer x, Integer y, Integer z, List<Integer> data) {
 		// this.subject = subject;
 		this.x = x;
 		this.y = y;
 		this.z = z;
 		this.data = data;
-		this.id = x + "|" + y + "|" + z + "|";
-	}
-
-	public String getID() {
-		return this.id;
 	}
 
 	public void setX(Integer x) {
@@ -47,7 +38,7 @@ public class HcList implements Serializable {
 		return this.z;
 	}
 
-	public void setData(ArrayList<Integer> data) {
+	public void setData(List<Integer> data) {
 		this.data = data;
 	}
 
@@ -55,4 +46,7 @@ public class HcList implements Serializable {
 		return this.data;
 	}
 
+	public String toString() {
+		return x + "|" + y + "|" + z + "|" + Arrays.toString(data.toArray());
+	}
 }
