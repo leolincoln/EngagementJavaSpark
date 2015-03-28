@@ -10,16 +10,20 @@ public class HcList implements Serializable {
 	private String id;
 	private List<Integer> data;
 
-	public HcList(Integer x, Integer y, Integer z, List<Integer> data) {
+	public HcList(String id,Integer x, Integer y, Integer z, List<Integer> data) {
 		// this.subject = subject;
 		this.x = x;
 		this.y = y;
 		this.z = z;
 		this.data = data;
-		this.id = x + "|" + y + "|" + z + "|";
+		this.id = id;
 	}
 
-	public String getID() {
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public String getId() {
 		return this.id;
 	}
 
