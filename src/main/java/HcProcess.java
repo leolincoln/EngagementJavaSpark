@@ -155,7 +155,7 @@ public class HcProcess implements Serializable {
 		 */
 
 		JavaPairRDD<String, List<Integer>> s = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandata" + subjectNum,
+				.cassandraTable("engagement", "piemandata" +"_"+ subjectNum,
 						mapRowTo(HcList.class)).mapToPair(
 						new PairFunction<HcList, String, List<Integer>>() {
 							private static final long serialVersionUID = 1L;
@@ -259,22 +259,23 @@ public class HcProcess implements Serializable {
 		conf.set("spark.cassandra.connection.host", "cub0,cub1,cub2,cub3");
 		conf.set("spark.cassandra.auth.username", "cassandra");
 		conf.set("spark.cassandra.auth.password", "cassandra");
-		conf.set("spark.executor.memory", "10g");
-		conf.set("spark.task.maxFailures", "100");
+		conf.set("spark.executor.memory", "30g");
+		conf.set("spark.task.maxFailures", "10");
 		conf.set("keyspaceName", "engagement");
 		conf.set("tableName", "piemandatacorrresults");
 
 		// default is 1000
-		conf.set("spark.cassandra.input.page.row.size", "10");
+		//conf.set("spark.cassandra.input.page.row.size", "10");
 		// default is 100000
 		// conf.set("spark.cassandra.input.split.size", "20000");
 		// concurrent writes for cassandra is specified in cassandra.yaml which
 		// has 32 as the max value.
-		conf.set("spark.cassandra.output.concurrent.writes", "1");
+		conf.set("spark.cassandra.output.concurrent.writes", "32");
 		conf.set("spark.cassandra.connection.timeout_ms","20000ms");
 		conf.set("spark.cassandra.read.timeout_ms","20000ms");
 		// optional
 		// conf.set("spark.cassandra.output.batch.size.rows", "1");
+		conf.set("spark.scheduler.mode", "FAIR");
 		HcProcess app = new HcProcess(conf);
 		app.run();
 	}
