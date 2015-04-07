@@ -187,7 +187,6 @@ public class HcProcess implements Serializable {
 		
 		JavaRDD<HcResults> corrData = cartProduct
 				.map(new Function<Tuple2<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>>, HcResults>() {
-
 					@Override
 					public HcResults call(
 							Tuple2<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>> t)
@@ -196,6 +195,7 @@ public class HcProcess implements Serializable {
 						PearsonsCorrelation pc = new PearsonsCorrelation();
 						Double c = pc.correlation(getDoubleArray(t._1._2),
 								getDoubleArray(t._2._2));
+						System.out.println(c);
 						return new HcResults(subjectNum, t._1._1, t._2._1, c);
 					}
 				});
@@ -255,27 +255,32 @@ public class HcProcess implements Serializable {
 		conf.set("spark.cassandra.username", "cassandra"); // Optional
 		conf.set("spark.cassandra.password", "cassandra"); // Optional
 		// conf.set("spark.cassandra.connection.host", "cub0,cub2,cub3,cub1");
-
+		conf.set("spark.cassandra.connection.timeout_ms","20000ms");
 		conf.set("spark.cassandra.connection.host", "cub0,cub1,cub2,cub3");
 		conf.set("spark.cassandra.auth.username", "cassandra");
 		conf.set("spark.cassandra.auth.password", "cassandra");
-		conf.set("spark.executor.memory", "30g");
-		conf.set("spark.task.maxFailures", "10");
+		conf.set("spark.executor.memory", "20g");
+		conf.set("spark.task.maxFailures", "20");
 		conf.set("keyspaceName", "engagement");
 		conf.set("tableName", "piemandatacorrresults");
-
+		conf.set("spark.cores.max", "16");
+		conf.set("spark.cassandra.input.consistency.level", "ONE");
+		conf.set("spark.cassandra.input.split.size","50000");
+		conf.set("spark.cassandra.output.concurrent.writes", "1");
+		conf.set("spark.cassandra.output.batch.size.bytes","2048");
+		conf.set("spark.cassandra.output.consistency.level", "ONE");
 		// default is 1000
 		//conf.set("spark.cassandra.input.page.row.size", "10");
 		// default is 100000
 		// conf.set("spark.cassandra.input.split.size", "20000");
 		// concurrent writes for cassandra is specified in cassandra.yaml which
 		// has 32 as the max value.
-		conf.set("spark.cassandra.output.concurrent.writes", "32");
+		//conf.set("spark.cassandra.output.concurrent.writes", "32");
 		conf.set("spark.cassandra.connection.timeout_ms","20000ms");
 		conf.set("spark.cassandra.read.timeout_ms","20000ms");
 		// optional
 		// conf.set("spark.cassandra.output.batch.size.rows", "1");
-		conf.set("spark.scheduler.mode", "FAIR");
+		//conf.set("spark.scheduler.mode", "FAIR");
 		HcProcess app = new HcProcess(conf);
 		app.run();
 	}
