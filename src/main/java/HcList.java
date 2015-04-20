@@ -7,21 +7,19 @@ public class HcList implements Serializable {
 	private static final long serialVersionUID = 4614441050244688113L;
 	private Integer x, y, z;
 
-	private String id;
+	
 	private List<Integer> data;
-
-	public HcList(String id,Integer x, Integer y, Integer z, List<Integer> data) {
+	private String id;
+	public HcList(Integer x, Integer y, Integer z, List<Integer> data) {
 		// this.subject = subject;
 		this.x = x;
 		this.y = y;
 		this.z = z;
 		this.data = data;
-		this.id = id;
+		this.id = this.x.toString()+'|'+this.y.toString()+'|'+this.z.toString();
+		
 	}
 
-	public void setId(String id) {
-		this.id = id;
-	}
 
 	public String getId() {
 		return this.id;
