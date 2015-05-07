@@ -160,7 +160,6 @@ public class HcProcess implements Serializable {
 						mapRowTo(HcList.class)).mapToPair(
 						new PairFunction<HcList, String, List<Integer>>() {
 							private static final long serialVersionUID = 1L;
-
 							@Override
 							public Tuple2<String, List<Integer>> call(HcList t)
 									throws Exception {
@@ -199,7 +198,7 @@ public class HcProcess implements Serializable {
 						Double c = pc.correlation(getDoubleArray(t._1._2),
 								getDoubleArray(t._2._2));
 						//System.out.println(c);
-						return new HcResults(subjectNum, t._1._1, t._2._1, c);
+						return new HcResults(t._1._1, t._2._1, c);
 					}
 				});
 		// System.out.println("corrData: ");
@@ -262,7 +261,7 @@ public class HcProcess implements Serializable {
 		conf.set("spark.cassandra.connection.host", "cub0,cub1,cub2,cub3");
 		conf.set("spark.cassandra.auth.username", "cassandra");
 		conf.set("spark.cassandra.auth.password", "cassandra");
-		conf.set("spark.executor.memory", "20g");
+		conf.set("spark.executor.memory", "10g");
 		conf.set("spark.task.maxFailures", "20");
 		conf.set("keyspaceName", "engagement");
 		conf.set("tableName", "piemandatacorrresults");
@@ -270,15 +269,15 @@ public class HcProcess implements Serializable {
 		//conf.set("spark.cassandra.input.consistency.level", "ONE");
 		//conf.set("spark.cassandra.input.split.size","50000");
 		//conf.set("spark.cassandra.output.concurrent.writes", "1");
-		conf.set("spark.cassandra.output.batch.size.bytes","2048");
+		conf.set("spark.cassandra.output.batch.size.bytes","1024");
 		//conf.set("spark.cassandra.output.consistency.level", "ONE");
 		// default is 1000
 		//conf.set("spark.cassandra.input.page.row.size", "10");
 		// default is 100000
-		// conf.set("spark.cassandra.input.split.size", "20000");
 		// concurrent writes for cassandra is specified in cassandra.yaml which
 		// has 32 as the max value.
 		//conf.set("spark.cassandra.output.concurrent.writes", "32");
+		//conf.set("spark.cassandra.output.throughput_mb_per_sec", "800");
 		conf.set("spark.cassandra.connection.timeout_ms","20000");
 		conf.set("spark.cassandra.read.timeout_ms","20000");
 		// optional
