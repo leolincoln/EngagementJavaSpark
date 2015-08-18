@@ -160,7 +160,7 @@ public class NormalTest implements Serializable {
 
 	private class TupleComparator<E> implements Comparator<Tuple2<Integer, E>>,
 			Serializable {
-		@Override
+		
 		public int compare(Tuple2<Integer, E> tuple1, Tuple2<Integer, E> tuple2) {
 			return tuple1._1 < tuple2._1 ? 0 : 1;
 		}

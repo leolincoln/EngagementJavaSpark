@@ -160,7 +160,7 @@ public class HcProcess implements Serializable {
 						mapRowTo(HcList.class)).mapToPair(
 						new PairFunction<HcList, String, List<Integer>>() {
 							private static final long serialVersionUID = 1L;
-							@Override
+							
 							public Tuple2<String, List<Integer>> call(HcList t)
 									throws Exception {
 								return new Tuple2<String, List<Integer>>(t
@@ -189,7 +189,7 @@ public class HcProcess implements Serializable {
 		
 		JavaRDD<HcResults> corrData = cartProduct
 				.map(new Function<Tuple2<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>>, HcResults>() {
-					@Override
+				
 					public HcResults call(
 							Tuple2<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>> t)
 							throws Exception {
@@ -233,7 +233,7 @@ public class HcProcess implements Serializable {
 
 	private class TupleComparator<E> implements Comparator<Tuple2<Integer, E>>,
 			Serializable {
-		@Override
+		
 		public int compare(Tuple2<Integer, E> tuple1, Tuple2<Integer, E> tuple2) {
 			return tuple1._1 < tuple2._1 ? 0 : 1;
 		}
@@ -252,7 +252,7 @@ public class HcProcess implements Serializable {
 		SparkConf conf = new SparkConf();
 		conf.setAppName("HcProcess");
 		// local[4] is not a spark cluster.
-		conf.setMaster("spark://wolf.iems.northwestern.edu:7077");
+		//conf.setMaster("spark://wolf.iems.northwestern.edu:7077");
 		// cub0 is the cassandra cluster
 		//conf.set("spark.cassandra.username", "cassandra"); // Optional
 		//conf.set("spark.cassandra.password", "cassandra"); // Optional
