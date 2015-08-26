@@ -41,7 +41,7 @@ import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
 public class HcProcess implements Serializable {
 	private static final JavaDoubleRDD cassndraRowsRDD = null;
 	private transient SparkConf conf;
-	private Integer subjectNum = 0;
+	private Integer subjectNum = 3;
 
 	// private int xSize, ySize, zSize, subjectSize;
 
