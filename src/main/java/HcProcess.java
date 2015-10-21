@@ -110,7 +110,7 @@ public class HcProcess implements Serializable {
         String[] xyz = id.split("|");
         return "x="+xyz[0]+" and y="+xyz[1]+" and z="+xyz[2];
     }
-    public synchronized Double getCorr(JavaSparkContext sc, String keyspace, String tableName, String id1,String id2){
+    public synchronized Double getCorr(final JavaSparkContext sc, String keyspace, String tableName, String id1,String id2){
         String cqlString1 = cqlString(id1);
         String cqlString2 = cqlString(id2);
         List<Integer> x = javaFunctions(sc).cassandraTable(keyspace, tableName,mapRowTo(HcList.class)).where(cqlString1).map(new Function<HcList, List<Integer>>() {

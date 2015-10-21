@@ -2,9 +2,9 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>edu.northwestern</groupId>
-	<artifactId>TestCassandraMaven</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>TestCassandraMaven</name>
+	<artifactId>engagement_new</artifactId>
+	<version>2.0</version>
+	<name>engagement_new</name>
 	<description>this project is for cassandra driver using maven. </description>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
