@@ -41,21 +41,20 @@ import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
 public class HcProcess implements Serializable {
 	private static final JavaDoubleRDD cassndraRowsRDD = null;
 	private transient SparkConf conf;
-	private Integer subjectNum = 3;
+	private Integer subjectNum = 4;
+    //tables has all the data in. Hardcoded the prefix.
+    private String prefix = "piemandata";
+    private int[] indexes = {0,1,2,3,4,5,6,7,8,9};
 
 	// private int xSize, ySize, zSize, subjectSize;
 
 	private HcProcess(SparkConf conf) {
 		this.conf = conf;
-
 	}
 
 	private synchronized void run() {
+        //Create java spark context
 		JavaSparkContext sc = new JavaSparkContext(conf);
-		// this.xSize = getXSize(sc);
-		// this.ySize = getYSize(sc);
-		// this.zSize = getZSize(sc);
-		// this.subjectSize = getSubjectSize(sc);
 		testGetData(sc);
 
 		/*
@@ -100,50 +99,42 @@ public class HcProcess implements Serializable {
 		 */
 	}
 
-	public int getXSize(JavaSparkContext sc) {
-		JavaRDD<CassandraRow> xS = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatalist").select("x")
-				.distinct();
-		System.out.println("X size: " + xS.count());
-		return (int) xS.count();
-	}
-
-	public int getYSize(JavaSparkContext sc) {
-		JavaRDD<CassandraRow> yS = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatalist")
-				.where("x=? and subject=?", "0", "0").select("y").distinct();
-		System.out.println("Y size: " + yS.count());
-		return (int) yS.count();
-	}
-
-	public int getZSize(JavaSparkContext sc) {
-		JavaRDD<CassandraRow> zS = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandatalist")
-				.where("x=? and subject=? and y=?", "0", "0", "0").select("z")
-				.distinct();
-		System.out.println("Z size: " + zS.count());
-		return (int) zS.count();
-	}
-
-	public int getSubjectSize(JavaSparkContext sc) {
-		JavaRDD<CassandraRow> subjectS = javaFunctions(sc)
-				.cassandraTable("engagement", "hitchcockdatatotal2")
-				.select("subject").distinct();
-		System.out.println("subject size: " + subjectS.count());
-		return (int) subjectS.count();
-	}
+    /**
+     *
+     * @param id -- string of the id containing x|y|z
+     * @return String of cql to the where clause.
+     * E.g. input id: 1|1|1
+     *      output: x=1 and y=1 and z=1
+     */
+    public String cqlString(String id){
+        String[] xyz = id.split("|");
+        return "x="+xyz[0]+" and y="+xyz[1]+" and z="+xyz[2];
+    }
+    public synchronized Double getCorr(JavaSparkContext sc, String keyspace, String tableName, String id1,String id2){
+        String cqlString1 = cqlString(id1);
+        String cqlString2 = cqlString(id2);
+        List<Integer> x = javaFunctions(sc).cassandraTable(keyspace, tableName,mapRowTo(HcList.class)).where(cqlString1).map(new Function<HcList, List<Integer>>() {
+            public List<Integer> call(HcList hcList) throws Exception {
+               return hcList.getData();
+            }
+        }).first();
+        List<Integer> y = javaFunctions(sc).cassandraTable(keyspace, tableName,mapRowTo(HcList.class)).where(cqlString2).map(new Function<HcList, List<Integer>>() {
+            public List<Integer> call(HcList hcList) throws Exception {
+                return hcList.getData();
+            }
+        }).first();
+        PearsonsCorrelation pc = new PearsonsCorrelation();
+        Double c = pc.correlation(getDoubleArray(x),
+                getDoubleArray(y));
+        return c;
+    }
 
 	/**
 	 * 
 	 * @param sc
 	 *            -- JavaSparkContext passed from main.
 	 */
-	public synchronized void testGetData(JavaSparkContext sc) {
-
-		// JavaPairRDD<Hitchcockdatatotal,Integer> newRDD =
-		// javaFunctions(sc).cassandraTable("engagement","hitchcockdatatotal");
-		// s stores all string->list(data) pairs. string is the id of the
-		// row.
+	public synchronized void testGetData(final JavaSparkContext sc) {
 		final long startTime_mapping = System.currentTimeMillis();
 
 		/*
@@ -156,8 +147,8 @@ public class HcProcess implements Serializable {
 		 */
 
 		JavaPairRDD<String, List<Integer>> s = javaFunctions(sc)
-				.cassandraTable("engagement", "piemandata" + subjectNum,
-						mapRowTo(HcList.class)).mapToPair(
+				.cassandraTable("engagement", prefix + subjectNum,
+						mapRowTo(HcList.class)).limit(100L).mapToPair(
 						new PairFunction<HcList, String, List<Integer>>() {
 							private static final long serialVersionUID = 1L;
 							
@@ -167,8 +158,7 @@ public class HcProcess implements Serializable {
 										.getId(), t.getData());
 							}
 						});
-		// System.out.println("results from table: ");
-		// System.out.println(StringUtils.join(s.toArray(), "\n"));
+
 		s.persist(StorageLevel.MEMORY_ONLY());
 		final long endTime_mapping = System.currentTimeMillis();
 		System.out.println("Mapping To Double list finished, time is: "
@@ -193,26 +183,35 @@ public class HcProcess implements Serializable {
 					public HcResults call(
 							Tuple2<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>> t)
 							throws Exception {
-						// .toArray(new Double(t._1._2.size()))
-						PearsonsCorrelation pc = new PearsonsCorrelation();
-						Double c = pc.correlation(getDoubleArray(t._1._2),
-								getDoubleArray(t._2._2));
-						//System.out.println(c);
-						return new HcResults(t._1._1, t._2._1, c);
+                        String table_name = "";
+                        Double sum_corr= 0.0;
+                        double c = 0.0;
+						//now go through all indexes from indexes.
+                        for(int index:indexes){
+                            table_name = prefix+index;
+                            //use the above table name to et the corr data from the same x,y,z
+                            c = getCorr(sc,sc.getConf().get("keyspaceName"),table_name,t._1()._1(),t._2()._1());
+                            //determine if we want to keep the value or not.
+                            sum_corr +=c;
+                        }
+                        // if the total correlation is not greater than 0.5
+                        // then ditch the result.
+                        if (sum_corr/ indexes.length <0.5){
+                            return null;
+                        }
+                        else{
+                            return new HcResults(t._1()._1(), t._2()._1(), sum_corr/ indexes.length );
+                        }
 					}
 				});
-		// System.out.println("corrData: ");
-		// System.out.println(StringUtils.join(corrData.toArray(), "\n"));
-		// corrData.coalesce(20000);
 		final long endTime_corr = System.currentTimeMillis();
 		System.out.println("corrData finished. Time: "
 				+ (endTime_corr - startTime_corr));
 		final long startTime_writingCorr = System.currentTimeMillis();
 		System.out.println("starting writing output to corrdata table");
 
-		//corrData.collectAsync();
-		javaFunctions(corrData).writerBuilder(sc.getConf().get("keyspaceName"),
-				sc.getConf().get("tableName")+subjectNum.toString(), mapToRow(HcResults.class))
+        javaFunctions(corrData).writerBuilder(sc.getConf().get("keyspaceName"),
+                sc.getConf().get("tableName"), mapToRow(HcResults.class))
 				.saveToCassandra();
 		
 		final long endTime_writingCorr = System.currentTimeMillis();
@@ -221,6 +220,7 @@ public class HcProcess implements Serializable {
 
 	}
 
+    //from a list of Integer array get a list of double
 	private synchronized double[] getDoubleArray(List<Integer> inArray) {
 		double[] result = new double[inArray.size()];
 		int i = 0;
@@ -229,14 +229,6 @@ public class HcProcess implements Serializable {
 			i++;
 		}
 		return result;
-	}
-
-	private class TupleComparator<E> implements Comparator<Tuple2<Integer, E>>,
-			Serializable {
-		
-		public int compare(Tuple2<Integer, E> tuple1, Tuple2<Integer, E> tuple2) {
-			return tuple1._1 < tuple2._1 ? 0 : 1;
-		}
 	}
 
 	private void showResults(JavaSparkContext sc) {
@@ -250,7 +242,7 @@ public class HcProcess implements Serializable {
 		 * "cassandra") //Optional
 		 */
 		SparkConf conf = new SparkConf();
-		conf.setAppName("HcProcess");
+		conf.setAppName("HcProcess_new");
 		// local[4] is not a spark cluster.
 		//conf.setMaster("spark://wolf.iems.northwestern.edu:7077");
 		// cub0 is the cassandra cluster
@@ -261,10 +253,10 @@ public class HcProcess implements Serializable {
 		conf.set("spark.cassandra.connection.host", "cub0,cub1,cub2,cub3");
 		conf.set("spark.cassandra.auth.username", "cassandra");
 		conf.set("spark.cassandra.auth.password", "cassandra");
-		conf.set("spark.executor.memory", "10g");
-		conf.set("spark.task.maxFailures", "20");
+		conf.set("spark.executor.memory", "20g");
+		conf.set("spark.task.maxFailures", "40");
 		conf.set("keyspaceName", "engagement");
-		conf.set("tableName", "piemandatacorrresults");
+		conf.set("tableName", "pieman_corr_new");
 		conf.set("spark.cores.max", "16");
 		//conf.set("spark.cassandra.input.consistency.level", "ONE");
 		//conf.set("spark.cassandra.input.split.size","50000");
