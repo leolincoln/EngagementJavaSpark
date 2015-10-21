@@ -191,7 +191,7 @@ public class HcProcess implements Serializable {
                             table_name = prefix+index;
                             //use the above table name to et the corr data from the same x,y,z
                             String cqlString1 = cqlString(t._1()._1());
-                            String cqlString2 = cqlString(t._2()._1()));
+                            String cqlString2 = cqlString(t._2()._1());
                             List<Integer> x = javaFunctions(sc).cassandraTable(sc.getConf().get("keyspaceName"),table_name,mapRowTo(HcList.class)).where(cqlString1).map(new Function<HcList, List<Integer>>() {
                                 public List<Integer> call(HcList hcList) throws Exception {
                                     return hcList.getData();
@@ -211,7 +211,7 @@ public class HcProcess implements Serializable {
                         // if the total correlation is not greater than 0.5
                         // then ditch the result.
                         if (sum_corr/ indexes.length <0.5){
-                            return new HcResults('no','no',0);
+                            return new HcResults("no","no",0.0);
                         }
                         else{
                             return new HcResults(t._1()._1(), t._2()._1(), sum_corr/ indexes.length );
