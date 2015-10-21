@@ -149,15 +149,15 @@ public class HcProcess implements Serializable {
 		JavaPairRDD<String, List<Integer>> s = javaFunctions(sc)
 				.cassandraTable("engagement", prefix + subjectNum,
 						mapRowTo(HcList.class)).limit(100L).mapToPair(
-						new PairFunction<HcList, String, List<Integer>>() {
-							private static final long serialVersionUID = 1L;
-							
-							public Tuple2<String, List<Integer>> call(HcList t)
-									throws Exception {
-								return new Tuple2<String, List<Integer>>(t
-										.getId(), t.getData());
-							}
-						});
+                        new PairFunction<HcList, String, List<Integer>>() {
+                            private static final long serialVersionUID = 1L;
+
+                            public Tuple2<String, List<Integer>> call(HcList t)
+                                    throws Exception {
+                                return new Tuple2<String, List<Integer>>(t
+                                        .getId(), t.getData());
+                            }
+                        });
 
 		s.persist(StorageLevel.MEMORY_ONLY());
 		final long endTime_mapping = System.currentTimeMillis();
@@ -190,14 +190,28 @@ public class HcProcess implements Serializable {
                         for(int index:indexes){
                             table_name = prefix+index;
                             //use the above table name to et the corr data from the same x,y,z
-                            c = getCorr(sc,sc.getConf().get("keyspaceName"),table_name,t._1()._1(),t._2()._1());
+                            String cqlString1 = cqlString(t._1()._1());
+                            String cqlString2 = cqlString(t._2()._1()));
+                            List<Integer> x = javaFunctions(sc).cassandraTable(sc.getConf().get("keyspaceName"),table_name,mapRowTo(HcList.class)).where(cqlString1).map(new Function<HcList, List<Integer>>() {
+                                public List<Integer> call(HcList hcList) throws Exception {
+                                    return hcList.getData();
+                                }
+                            }).first();
+                            List<Integer> y = javaFunctions(sc).cassandraTable(sc.getConf().get("keyspaceName"),table_name,mapRowTo(HcList.class)).where(cqlString2).map(new Function<HcList, List<Integer>>() {
+                                public List<Integer> call(HcList hcList) throws Exception {
+                                    return hcList.getData();
+                                }
+                            }).first();
+                            PearsonsCorrelation pc = new PearsonsCorrelation();
+                            c = pc.correlation(getDoubleArray(x),
+                                    getDoubleArray(y));
                             //determine if we want to keep the value or not.
                             sum_corr +=c;
                         }
                         // if the total correlation is not greater than 0.5
                         // then ditch the result.
                         if (sum_corr/ indexes.length <0.5){
-                            return null;
+                            return new HcResults('no','no',0);
                         }
                         else{
                             return new HcResults(t._1()._1(), t._2()._1(), sum_corr/ indexes.length );
