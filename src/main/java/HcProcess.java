@@ -110,24 +110,6 @@ public class HcProcess implements Serializable {
         String[] xyz = id.split("|");
         return "x="+xyz[0]+" and y="+xyz[1]+" and z="+xyz[2];
     }
-    public synchronized Double getCorr(final JavaSparkContext sc, String keyspace, String tableName, String id1,String id2){
-        String cqlString1 = cqlString(id1);
-        String cqlString2 = cqlString(id2);
-        List<Integer> x = javaFunctions(sc).cassandraTable(keyspace, tableName,mapRowTo(HcList.class)).where(cqlString1).map(new Function<HcList, List<Integer>>() {
-            public List<Integer> call(HcList hcList) throws Exception {
-               return hcList.getData();
-            }
-        }).first();
-        List<Integer> y = javaFunctions(sc).cassandraTable(keyspace, tableName,mapRowTo(HcList.class)).where(cqlString2).map(new Function<HcList, List<Integer>>() {
-            public List<Integer> call(HcList hcList) throws Exception {
-                return hcList.getData();
-            }
-        }).first();
-        PearsonsCorrelation pc = new PearsonsCorrelation();
-        Double c = pc.correlation(getDoubleArray(x),
-                getDoubleArray(y));
-        return c;
-    }
 
 	/**
 	 * 
@@ -136,7 +118,6 @@ public class HcProcess implements Serializable {
 	 */
 	public synchronized void testGetData(final JavaSparkContext sc) {
 		final long startTime_mapping = System.currentTimeMillis();
-
 		/*
 		 * JavaRDD<String> rdd = javaFunctions(sc).cassandraTable("engagement",
 		 * "test", mapRowTo(Test.class)).map(new Function<Test, String>() {
@@ -158,7 +139,6 @@ public class HcProcess implements Serializable {
                                         .getId(), t.getData());
                             }
                         });
-
 		s.persist(StorageLevel.MEMORY_ONLY());
 		final long endTime_mapping = System.currentTimeMillis();
 		System.out.println("Mapping To Double list finished, time is: "
@@ -179,7 +159,6 @@ public class HcProcess implements Serializable {
 		
 		JavaRDD<HcResults> corrData = cartProduct
 				.map(new Function<Tuple2<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>>, HcResults>() {
-				
 					public HcResults call(
 							Tuple2<Tuple2<String, List<Integer>>, Tuple2<String, List<Integer>>> t)
 							throws Exception {
@@ -189,7 +168,7 @@ public class HcProcess implements Serializable {
 						//now go through all indexes from indexes.
                         for(int index:indexes){
                             table_name = prefix+index;
-                            //use the above table name to et the corr data from the same x,y,z
+                            //use the above table name to get the corr data from the same x,y,z
                             String cqlString1 = cqlString(t._1()._1());
                             String cqlString2 = cqlString(t._2()._1());
                             List<Integer> x = javaFunctions(sc).cassandraTable(sc.getConf().get("keyspaceName"),table_name,mapRowTo(HcList.class)).where(cqlString1).map(new Function<HcList, List<Integer>>() {
@@ -245,8 +224,6 @@ public class HcProcess implements Serializable {
 		return result;
 	}
 
-	private void showResults(JavaSparkContext sc) {
-	}
 
 	public synchronized static void main(String args[]) {
 
