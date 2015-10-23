@@ -29,7 +29,12 @@ import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import scala.Tuple2;
 import scala.collection.Iterator;
 
+//required for accessing cassandra from worker node. 
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Host;
+import com.datastax.driver.core.Metadata;
+
 import com.datastax.spark.connector.cql.CassandraConnector;
 import com.datastax.spark.connector.japi.CassandraJavaUtil;
 import com.datastax.spark.connector.japi.CassandraRow;
